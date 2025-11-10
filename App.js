@@ -1,20 +1,26 @@
-import { StatusBar } from 'expo-status-bar';
-import { StyleSheet, Text, View } from 'react-native';
+import React, { useEffect } from "react";
+import { NavigationContainer } from "@react-navigation/native";
+import { createStackNavigator } from "@react-navigation/stack";
+import LevelScreen from "./Screens/LevelScreen";
+import GameScreen from "./Screens/GameScreen";
+import * as NavigationBar from "expo-navigation-bar";
+
+const Stack = createStackNavigator();
 
 export default function App() {
+  useEffect(() => {
+    // 🔹 Oculta completamente la barra de navegación del sistema (Android)
+    NavigationBar.setVisibilityAsync("hidden");
+    // 🔹 Permite mostrarla deslizando
+    NavigationBar.setBehaviorAsync("overlay-swipe");
+  }, []);
+
   return (
-    <View style={styles.container}>
-      <Text>Open up App.js to start working on your app!</Text>
-      <StatusBar style="auto" />
-    </View>
+    <NavigationContainer>
+      <Stack.Navigator screenOptions={{ headerShown: false }}>
+        <Stack.Screen name="Levels" component={LevelScreen} />
+        <Stack.Screen name="Game" component={GameScreen} />
+      </Stack.Navigator>
+    </NavigationContainer>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#fff',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-});
