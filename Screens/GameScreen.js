@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from "react";
-import { View, Text, TouchableOpacity, Alert, ActivityIndicator } from "react-native";
+import { View, Text, TouchableOpacity, Alert, ActivityIndicator, Image } from "react-native";
 import MapView, { Marker, Polyline } from "react-native-maps";
 import { Ionicons } from "@expo/vector-icons";
 import { db } from "../Utils/firebase";
@@ -24,6 +24,7 @@ const GameScreen = ({ route, navigation }) => {
     const soundObject = useRef(new Audio.Sound());
     const [isLoaded, setIsLoaded] = useState(false);
     const [checkDisabled, setCheckDisabled] = useState(false);
+    const [showNext, setShowNext] = useState(false);
 
 
     useEffect(() => {
@@ -58,20 +59,36 @@ const GameScreen = ({ route, navigation }) => {
 
     // 🔹 Segundo useEffect solo para cargar preguntas
     useEffect(() => {
+        let timeoutId = setTimeout(() => {
+            if (loading) {
+                Alert.alert(
+                    "Error",
+                    "No se pudieron cargar las preguntas (tiempo de espera excedido).",
+                    [
+                        {
+                            text: "Volver",
+                            onPress: () => navigation.goBack(),
+                        },
+                    ],
+                    { cancelable: false }
+                );
+                setLoading(false);
+            }
+        }, 3000);
+
         const fetchQuestions = async () => {
             try {
                 const q = query(
                     collection(db, "questions"),
-                    where("difficulty", "==", difficulty), // 🔹 Filtra por dificultad
+                    where("difficulty", "==", difficulty),
                     orderBy("title", "asc")
                 );
-                const querySnapshot = await getDocs(q);
-                const loadedQuestions = [];
 
+                const querySnapshot = await getDocs(q);
+
+                const loadedQuestions = [];
                 querySnapshot.forEach((doc) => {
                     const data = doc.data();
-
-                    // 🔹 Convertimos el target a coordenadas numéricas
                     let lat = 0, lon = 0;
                     if (Array.isArray(data.target) && data.target.length === 2) {
                         lat = parseFloat(data.target[0]);
@@ -93,17 +110,46 @@ const GameScreen = ({ route, navigation }) => {
                     });
                 });
 
+                clearTimeout(timeoutId); // ✅ cancelamos timeout si carga correctamente
+
+                if (loadedQuestions.length === 0) {
+                    // ❌ No hay preguntas para esta dificultad
+                    Alert.alert(
+                        "Sin preguntas",
+                        `No hay preguntas disponibles para la dificultad "${difficulty}".`,
+                        [
+                            { text: "Volver", onPress: () => navigation.goBack() }
+                        ],
+                        { cancelable: false }
+                    );
+                    setLoading(false);
+                    return;
+                }
+
                 setQuestions(loadedQuestions);
                 setLoading(false);
             } catch (error) {
-                console.error("Error al cargar preguntas:", error);
-                Alert.alert("Error", "No se pudieron cargar las preguntas.");
+                clearTimeout(timeoutId);
+                Alert.alert(
+                    "Error",
+                    "No se pudieron cargar las preguntas: " + error.message,
+                    [
+                        {
+                            text: "Volver",
+                            onPress: () => navigation.goBack(),
+                        },
+                    ],
+                    { cancelable: false }
+                );
                 setLoading(false);
             }
         };
 
         fetchQuestions();
+
+        return () => clearTimeout(timeoutId);
     }, []);
+
 
     const currentQuestion = questions[currentIndex];
 
@@ -131,13 +177,25 @@ const GameScreen = ({ route, navigation }) => {
 
     const handleMapPress = (e) => setUserMarker(e.nativeEvent.coordinate);
 
+    const handleNextQuestion = () => {
+        if (currentIndex < questions.length - 1) {
+            setCurrentIndex(currentIndex + 1);
+            setUserMarker(null);
+            setDistance(null);
+            setStartTime(Date.now());
+            setShowNext(false);
+        } else {
+            setShowResults(true);
+        }
+    };
+
     const handleCheck = () => {
         if (!userMarker) {
             Alert.alert("Selecciona un punto en el mapa");
             return;
         }
 
-        setCheckDisabled(true); // 🔹 bloqueamos el botón inmediatamente
+        setCheckDisabled(true);
 
         const dist = calculateDistance(
             userMarker.latitude,
@@ -152,7 +210,7 @@ const GameScreen = ({ route, navigation }) => {
         const score = calculateScore(dist, timeElapsed);
         setScores([...scores, { question: currentQuestion.title, distance: dist, score }]);
 
-        // 🔍 Hacer zoom para mostrar ambos puntos
+        // 🔍 Muestra ambos puntos en el mapa
         if (mapRef.current && userMarker) {
             mapRef.current.fitToCoordinates(
                 [userMarker, currentQuestion.target],
@@ -160,33 +218,33 @@ const GameScreen = ({ route, navigation }) => {
             );
         }
 
-        setTimeout(() => {
-            if (currentIndex < questions.length - 1) {
-                setCurrentIndex(currentIndex + 1);
-                setUserMarker(null);
-                setDistance(null);
-                setStartTime(Date.now());
-            } else {
-                setShowResults(true);
-            }
-            setCheckDisabled(false); // 🔹 desbloqueamos el botón al terminar
-        }, 3000);
+        // 🔹 En lugar de pasar de pregunta, solo cambia el modo del botón
+        setShowNext(true);
+        setCheckDisabled(false);
     };
+
 
     if (showResults) {
         const totalScore = scores.reduce((acc, item) => acc + item.score, 0);
         return (
-            <View style={styles.container}>
-                <Text style={styles.questTitle}>Resultados Level {level}</Text>
-                {scores.map((item, idx) => (
-                    <Text key={idx} style={styles.resultText}>
-                        {item.question}: {item.distance} km → {item.score} pts
-                    </Text>
-                ))}
+            <View style={[styles.container, { justifyContent: "space-between", paddingVertical: 20 }]}>
+                <View style={{ alignItems: "center", flex: 1 }}>
+                    <Text style={styles.questTitle}>Resultados Level {level}</Text>
+
+                    {scores.map((item, idx) => (
+                        <Text key={idx} style={styles.resultText}>
+                            {item.question}: {item.distance} km → {item.score} pts
+                        </Text>
+                    ))}
+
+                </View>
                 <Text style={[styles.resultText, { marginTop: 20, fontSize: 18 }]}>
                     Puntuación total: {totalScore} pts
                 </Text>
-                <TouchableOpacity style={[styles.startButton, { marginTop: 20 }]} onPress={() => navigation.goBack()}>
+                <TouchableOpacity
+                    style={[styles.startButton, { alignSelf: "center", marginTop: 20 }]}
+                    onPress={() => navigation.goBack()}
+                >
                     <Text style={styles.startText}>Volver</Text>
                 </TouchableOpacity>
             </View>
@@ -218,28 +276,47 @@ const GameScreen = ({ route, navigation }) => {
             )}
 
             <MapView
-                ref={mapRef}   // ✅ referencia aquí
-                style={[styles.map, { marginBottom: 80 }]}
+                ref={mapRef}
+                style={[styles.map]}
                 initialRegion={{
-                    latitude: 40.0,         
+                    latitude: 40.0,
                     longitude: -3.7,
-                    latitudeDelta: 10.5,  
+                    latitudeDelta: 10.5,
                     longitudeDelta: 10.5,
                 }}
-                onPress={handleMapPress}
+                mapType="satellite" // 🔹 modo satélite sin nombres
+                onLongPress={handleMapPress} // 🔹 requiere mantener presionado
             >
-
-                {userMarker && <Marker coordinate={userMarker} pinColor="red" />}
-                {distance && <Marker coordinate={currentQuestion.target} pinColor="orange" />}
-                {distance && <Polyline coordinates={[userMarker, currentQuestion.target]} strokeColor="blue" strokeWidth={2} />}
+                {userMarker && <Marker coordinate={userMarker} pinColor="orange" />}
+                {distance && <Marker coordinate={currentQuestion.target} pinColor="red" />}
+                {distance && (
+                    <Polyline
+                        coordinates={[userMarker, currentQuestion.target]}
+                        strokeColor="blue"
+                        strokeWidth={2}
+                    />
+                )}
             </MapView>
-
+            <Text style={[styles.textAjuda, { marginBottom: 60 }]}>Mantén pulsado para poner la marca</Text>
             {distance && <Text style={styles.resultText}>Estás a {distance} km del objetivo</Text>}
 
-            <View style={styles.bottomBar}>
-                <TouchableOpacity style={styles.startButton} onPress={handleCheck} disabled={checkDisabled}>
-                    <Text style={styles.startText}>Check</Text>
-                </TouchableOpacity>
+            <View style={[styles.bottomBar, { flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingHorizontal: 20, },]}>
+                {/* Imagen a la izquierda */}
+                <Image source={require("../assets/Geogeser.jpg")} style={{ width: 50, height: 50, borderRadius: 8 }} resizeMode="cover" />
+                {/* Botón centrado */}
+                <View style={{ flex: 1, alignItems: "center" }}>
+                    <TouchableOpacity
+                        style={styles.startButton}
+                        onPress={showNext ? handleNextQuestion : handleCheck}
+                        disabled={checkDisabled}
+                    >
+                        <Text style={styles.startText}>
+                            {showNext ? "Next" : "Check"}
+                        </Text>
+                    </TouchableOpacity>
+                </View>
+                {/* Espacio vacío a la derecha para mantener centrado el botón */}
+                <View style={{ width: 50 }} />
             </View>
         </View>
     );

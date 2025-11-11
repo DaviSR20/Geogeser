@@ -12,7 +12,7 @@ export default StyleSheet.create({
         flexDirection: "row",
         justifyContent: "space-between",
         alignItems: "center",
-        marginBottom: 20,
+        marginBottom: 40,
     },
     title: {
         fontSize: 22,
@@ -23,6 +23,30 @@ export default StyleSheet.create({
         width: "100%",
         alignItems: "center",
         paddingBottom: 120,
+    },
+    scrollView: {
+        width: "100%", // cápsula ocupa todo el ancho
+    },
+
+    scrollContainer: {
+        paddingBottom: 100,
+        alignItems: "center",
+        paddingHorizontal: 10,
+    },
+    // Nueva cápsula al 100% para la barra
+    levelCapsule: {
+        width: "50%",       // ocupa todo el ancho
+        alignItems: "center", // centra el contenido interno
+        marginVertical: 10,
+    },
+
+    // Contenido reducido dentro de la cápsula
+    levelCard: {
+        width: "80%",        // menor tamaño que la cápsula
+        backgroundColor: "#fff",
+        borderRadius: 50,
+        padding: 15,
+        alignItems: "center",
     },
     levelCard: {
         width: "100%",
@@ -94,7 +118,7 @@ export default StyleSheet.create({
     },
     map: {
         width: "90%",
-        height: 300,
+        height: 400,
         borderRadius: 10,
     },
     resultText: {
@@ -102,6 +126,15 @@ export default StyleSheet.create({
         fontSize: 16,
         fontWeight: "bold",
     },
-
+    textAjuda: {
+        color: "gray",
+        fontSize: 14,
+        textAlign: "left",
+        alignSelf: "flex-start",
+        marginLeft: 15,
+        marginBottom: 8,
+        fontStyle: "italic",
+        opacity: 0.8,
+    },
 });
 

@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { View, Text, TouchableOpacity, ScrollView, BackHandler, Platform, Alert } from "react-native";
+import { View, Text, TouchableOpacity, ScrollView, BackHandler, Platform, Alert, Image } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import styles from "../styles";
 import { db } from "../Utils/firebase";
@@ -44,6 +44,11 @@ const LevelScreen = ({ navigation }) => {
     { id: 1, difficulty: 2 },
     { id: 2, difficulty: 1 },
     { id: 3, difficulty: 3 },
+    { id: 4, difficulty: 4 },
+    { id: 5, difficulty: 5 },
+    { id: 6, difficulty: 1 },
+    { id: 7, difficulty: 3 },
+
   ];
   const toggleMute = () => {
     setMuted(!muted);
@@ -92,33 +97,42 @@ const LevelScreen = ({ navigation }) => {
         </TouchableOpacity>
       </View>
 
-      <ScrollView contentContainerStyle={styles.scrollContainer}>
+      <ScrollView
+        contentContainerStyle={styles.scrollContainer}
+        showsVerticalScrollIndicator={true}
+        style={styles.scrollView}
+      >
         {levels.map((lvl) => (
-          <LevelCard
-            key={lvl.id}
-            level={lvl.id}
-            difficulty={lvl.difficulty}
-            selected={selectedLevel === lvl.id}
-            onSelect={() => setSelectedLevel(lvl.id)}
-          />
+          <View key={lvl.id} style={styles.levelCapsule}>
+            <LevelCard
+              level={lvl.id}
+              difficulty={lvl.difficulty}
+              selected={selectedLevel === lvl.id}
+              onSelect={() => setSelectedLevel(lvl.id)}
+              style={styles.levelCard} // aplicamos estilo reducido
+            />
+          </View>
         ))}
       </ScrollView>
 
-      <View style={styles.bottomBar}>
-        <TouchableOpacity
-          style={styles.startButton}
-          onPress={() => {
-            if (selectedLevel) {
-              const selectedLvl = levels.find(lvl => lvl.id === selectedLevel);
-              navigation.navigate("Game", {
-                level: selectedLevel,
-                difficulty: selectedLvl.difficulty,
-                muted: muted
-              });
-            }
-          }}>
-          <Text style={styles.startText}>Start</Text>
-        </TouchableOpacity>
+      <View style={[styles.bottomBar, { flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingHorizontal: 20, },]}>
+        {/* Imagen a la izquierda */}
+        <Image source={require("../assets/Geogeser.jpg")} style={{ width: 50, height: 50, borderRadius: 8 }} resizeMode="cover" />
+        {/* Botón centrado */}
+        <View style={{ flex: 1, alignItems: "center" }}>
+          <TouchableOpacity
+            style={styles.startButton}
+            onPress={() => {
+              if (selectedLevel) {
+                const selectedLvl = levels.find((lvl) => lvl.id === selectedLevel);
+                navigation.navigate("Game", { level: selectedLevel, difficulty: selectedLvl.difficulty, muted: muted, });
+              }
+            }}>
+            <Text style={styles.startText}>Start</Text>
+          </TouchableOpacity>
+        </View>
+        {/* Espacio vacío a la derecha para mantener centrado el botón */}
+        <View style={{ width: 50 }} />
       </View>
     </View>
   );
